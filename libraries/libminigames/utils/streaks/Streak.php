@@ -33,7 +33,15 @@ class Streak
      */
     public static function FromSQL(array $row): Streak
     {
-        return new Streak($row["xuid"], $row["gameKey"], (int)$row["current"], (int)$row["best"], array_key_exists("bestChanged", $row) && (bool)$row["bestChanged"]);
+        // COMPAT 2026-10-27: xbox-auth=off 时玩家没有 XUID，连胜查询可能返回全 NULL 的行，
+        // 直接强转会抛 TypeError 导致整服崩溃。这里统一做空值兜底。
+        return new Streak(
+            (string)($row["xuid"] ?? ""),
+            (string)($row["gameKey"] ?? ""),
+            (int)($row["current"] ?? 0),
+            (int)($row["best"] ?? 0),
+            isset($row["bestChanged"]) && (bool)$row["bestChanged"]
+        );
     }
 
     /**

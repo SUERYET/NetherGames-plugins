@@ -17,7 +17,12 @@ use pocketmine\player\Player;
 use pocketmine\utils\Config;
 use pocketmine\world\World;
 use survivalgames\commands\DeathmatchCommand;
+use pocketmine\entity\Entity;
+use pocketmine\entity\EntityFactory;
+use pocketmine\entity\SavedDataLoadingException;
+use pocketmine\nbt\tag\CompoundTag;
 use survivalgames\commands\SGCommand;
+use survivalgames\utils\entity\Graveyard;
 use survivalgames\utils\SGArenaConfig;
 use function array_filter;
 use function dirname;
@@ -73,6 +78,14 @@ class SurvivalGames extends Minigame
         $commandMap->register(DeathmatchCommand::class, new DeathmatchCommand($this));
 
         $this->getServer()->getPluginManager()->registerEvents(new SGListener($this), $this);
+
+        // COMPAT 2026-10-28: 会进入世界的自定义实体都要在 EntityFactory 注册（Graveyard = 墓碑假人）
+        $entityFactory = EntityFactory::getInstance();
+        if (!$entityFactory->isRegistered(Graveyard::class)) {
+            $entityFactory->register(Graveyard::class, static function (World $world, CompoundTag $nbt): Entity {
+                throw new SavedDataLoadingException('Graveyard is not persistent');
+            }, ['ng:sg_graveyard']);
+        }
     }
 
     public function getModes(): array

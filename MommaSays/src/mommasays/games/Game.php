@@ -133,15 +133,7 @@ abstract class Game extends GameListener
         $player->getArmorInventory()->clearAll();
 
         $pos = $player->getLocation();
-        $player->getNetworkSession()->sendDataPacket(PlaySoundPacket::create(
-            "random.didgeridoo",
-            $pos->getX(),
-            $pos->getY(),
-            $pos->getZ(),
-            100,
-            1,
-            null
-        ));
+        $player->getNetworkSession()->sendDataPacket(PlaySoundPacket::create("random.didgeridoo", $pos->getX(), $pos->getY(), $pos->getZ(), 100, 1, 0, false, null, null));
     }
 
     /**
@@ -178,15 +170,7 @@ abstract class Game extends GameListener
         $player->getCursorInventory()->clearAll();
 
         $pos = $player->getLocation();
-        $player->getNetworkSession()->sendDataPacket(PlaySoundPacket::create(
-            "random.levelup",
-            $pos->getX(),
-            $pos->getY(),
-            $pos->getZ(),
-            100,
-            1,
-            null
-        ));
+        $player->getNetworkSession()->sendDataPacket(PlaySoundPacket::create("random.levelup", $pos->getX(), $pos->getY(), $pos->getZ(), 100, 1, 0, false, null, null));
     }
 
     public function isLoser(string $player): bool

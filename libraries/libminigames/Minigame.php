@@ -36,8 +36,13 @@ use NetherGames\NGEssentials\player\PlayerData;
 use NetherGames\NGEssentials\ServerManager;
 use NetherGames\NGEssentials\thread\NGThreadPool;
 use NetherGames\NGEssentials\utils\CustomIcon;
+use pocketmine\entity\Entity;
+use pocketmine\entity\EntityFactory;
+use pocketmine\entity\SavedDataLoadingException;
 use pocketmine\event\entity\EntityDamageEvent;
+use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\player\Player;
+use pocketmine\scheduler\ClosureTask;
 use pocketmine\plugin\PluginBase;
 use pocketmine\utils\Filesystem;
 use pocketmine\utils\TextFormat;
@@ -208,9 +213,23 @@ abstract class Minigame extends PluginBase
         if ($ess instanceof NGEssentials) {
             $this->ess = $ess;
 
+            // COMPAT 2026-10-28: 任何会进入世界的实体都必须在 EntityFactory 注册，
+            // 否则 World::addEntity() 抛 LogicException（实测：抛一次鱼竿就崩服）。
+            // libVanilla 的实体是各小游戏共用资源（鱼竿 / 弩 / 掉落生物），统一在这里兜底，
+            // 免得每换一个游戏都要重新撞一次。
+            $this->registerVanillaEntities();
+
             $this->registerClasses();
 
             $this->getServer()->getCommandMap()->register('requeue', new RequeueCommand($this));
+
+            // COMPAT 2026-10-28: 排行榜现在查本地库（含"扣掉官方基线"的计算），
+            // 每 5 分钟重算一次，新开的竞技场/大厅世界就能拿到较新的数据。
+            $this->getScheduler()->scheduleRepeatingTask(new ClosureTask(function (): void {
+                if (method_exists($this, 'getLeaderboards')) {
+                    $this->getLeaderboards()->reloadAll();
+                }
+            }), 20 * 60 * 5);
 
             $this->getLogger()->info('§2' . $this->getDescription()->getName() . ' successfully enabled!');
         } else {
@@ -370,6 +389,48 @@ abstract class Minigame extends PluginBase
      * @param Player $player The player
      * @return Arena|null
      */
+    /**
+     * 注册 libVanilla 提供的通用实体（各游戏共用）。已注册过的会跳过。
+     */
+    private function registerVanillaEntities(): void
+    {
+        $entityFactory = EntityFactory::getInstance();
+
+        $classes = [
+            'libVanilla\\entity\\object\\FishingHook',
+            'libVanilla\\entity\\object\\CrossbowArrow',
+            'libVanilla\\entity\\object\\Fireball',
+            'libVanilla\\entity\\object\\ThrownTrident',
+            'libVanilla\\entity\\object\\LightningBolt',
+            'libVanilla\\entity\\passive\\Chicken',
+            'libVanilla\\entity\\passive\\Cow',
+            'libVanilla\\entity\\passive\\Mooshroom',
+            'libVanilla\\entity\\passive\\Pig',
+            'libVanilla\\entity\\passive\\Rabbit',
+            'libVanilla\\entity\\passive\\Sheep',
+            'libVanilla\\entity\\hostile\\Creeper',
+            'libVanilla\\entity\\hostile\\Ghast',
+            'libVanilla\\entity\\hostile\\Skeleton',
+            'libVanilla\\entity\\hostile\\Zombie',
+            'libVanilla\\entity\\neutral\\Enderman',
+            'libVanilla\\entity\\neutral\\IronGolem',
+            'libVanilla\\entity\\neutral\\SnowGolem',
+            'libVanilla\\entity\\neutral\\Spider',
+            'libVanilla\\entity\\neutral\\ZombiePigman',
+        ];
+
+        foreach ($classes as $class) {
+            if (!class_exists($class) || $entityFactory->isRegistered($class)) {
+                continue;
+            }
+
+            $shortName = substr($class, (int) strrpos($class, '\\') + 1);
+            $entityFactory->register($class, static function (World $world, CompoundTag $nbt) use ($shortName): Entity {
+                throw new SavedDataLoadingException($shortName . ' is not persistent');
+            }, ['ng:vanilla_' . strtolower($shortName)]);
+        }
+    }
+
     public function getArena(Player $player): ?Arena
     {
         foreach ($this->getArenas(-1, true) as $arena) {

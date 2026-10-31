@@ -72,7 +72,8 @@ class BossBar
             [],
             $this->metadata->getAll(),
             new PropertySyncData([], []),
-            []
+            [],
+            null, // COMPAT 2026-10-28: protocol 2225 新增 ?PassengerOfBlockData
         ));
 
         $networkSession->sendDataPacket(UpdateAttributesPacket::create($this->entityId, array_map(static function (Attribute $attr): UpdateAttribute {

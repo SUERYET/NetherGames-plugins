@@ -71,15 +71,7 @@ trait SoundCosmeticTrait
                 !($soundKey[self::SOUND_RELATIVE_VOLUME_KEY] ?? true),
                 $soundKey[self::SOUND_DATA_KEY] ?? -1,
             ),
-            self::PLAY_SOUND_TYPE => PlaySoundPacket::create(
-                $soundKey[self::SOUND_ID_KEY] ?? throw new InvalidArgumentException("Unknown sound ID $entry->id"),
-                $pos->getX(),
-                $pos->getY(),
-                $pos->getZ(),
-                $soundKey[self::SOUND_VOLUME_KEY] ?? 1,
-                $soundKey[self::SOUND_PITCH_KEY] ?? 1,
-                null
-            ),
+            self::PLAY_SOUND_TYPE => PlaySoundPacket::create($soundKey[self::SOUND_ID_KEY] ?? throw new InvalidArgumentException("Unknown sound ID $entry->id"), $pos->getX(), $pos->getY(), $pos->getZ(), $soundKey[self::SOUND_VOLUME_KEY] ?? 1, $soundKey[self::SOUND_PITCH_KEY] ?? 1, 0, false, null, null),
             default => throw new InvalidArgumentException("Invalid sound type"),
         };
     }

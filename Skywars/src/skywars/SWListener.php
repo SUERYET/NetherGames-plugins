@@ -21,8 +21,13 @@ declare(strict_types=1);
 
 namespace skywars;
 
+use libminigames\events\MinigameQuitEvent;
 use libminigames\Minigame;
 use libminigames\MinigameListener;
+use libminigames\TeamArena;
+use NetherGames\NGEssentials\events\NGJoinEvent;
+use NetherGames\NGEssentials\NGEssentials;
+use pocketmine\scheduler\ClosureTask;
 use libVanilla\entity\object\FishingHook;
 use libVanilla\event\fishing\FishingRodRetractionEvent;
 use pocketmine\event\entity\EntityShootBowEvent;
@@ -48,6 +53,57 @@ class SWListener extends MinigameListener
         $plugin = parent::getPlugin();
 
         return $plugin;
+    }
+
+    /**
+     * COMPAT 2026-10-28: 单服开发模式下没有大厅服负责派发。
+     * libminigames 的通用入院逻辑只给 MurderMystery 注册过，Skywars 不生效，
+     * 玩家会一直停在 sub-lobby 里进不了对局。这里连入即入队。
+     */
+    public function onNGJoin(NGJoinEvent $event): void
+    {
+        if (NGEssentials::isInDevelopmentMode()) {
+            $this->getPlugin()->joinArena($event->getPlayer(), $this->resolveModeId());
+        }
+    }
+
+    /**
+     * COMPAT 2026-10-28: 一局打完会被送回 Hub，而 onNGJoin 只在连入时触发一次，
+     * 不重新入队就只能重连。退出后延迟 3 秒自动重新排队。
+     */
+    public function onMinigameQuit(MinigameQuitEvent $event): void
+    {
+        if (!NGEssentials::isInDevelopmentMode() || getenv('NG_AUTO_REQUEUE') === '0') {
+            return;
+        }
+
+        $reason = $event->getReason();
+        if ($reason === MinigameQuitEvent::DISCONNECT || $reason === MinigameQuitEvent::DISCONNECT_KICK) {
+            return;
+        }
+
+        $player = $event->getPlayer();
+        $modeId = $this->resolveModeId();
+
+        $this->getPlugin()->getScheduler()->scheduleDelayedTask(new ClosureTask(function () use ($player, $modeId): void {
+            if ($player->isOnline() && $this->getPlugin()->getArena($player) === null) {
+                $player->sendMessage('§a已离开对局，正在重新排队…');
+                $this->getPlugin()->joinArena($player, $modeId);
+            }
+        }), 60);
+    }
+
+    /**
+     * 模式由环境变量 NG_SW_MODE 决定（默认 solo）。
+     */
+    private function resolveModeId(): int
+    {
+        return match (strtolower(getenv('NG_SW_MODE') ?: 'solo')) {
+            'doubles', 'double' => TeamArena::MODE_DOUBLES,
+            '1v1', 'duels' => SWArena::MODE_DUELS_SOLO,
+            '2v2' => SWArena::MODE_DUELS_DOUBLES,
+            default => TeamArena::MODE_SOLO,
+        };
     }
 
     public function onEntityShootBow(EntityShootBowEvent $event): void

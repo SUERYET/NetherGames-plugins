@@ -146,7 +146,7 @@ class Filmroll extends NetworkSession
                 if ($player instanceof Player) {
                     $internalActorRuntimeId = $convertor->addEntity($runtimeActorRuntimeId);
 
-                    parent::sendDataPacket(PlayerListPacket::add([PlayerListEntry::createAdditionEntry($uniqueId = $player->getUniqueId(), $internalActorRuntimeId, $player->getDisplayName(), $this->getTypeConverter()->getSkinAdapter()->toSkinData($player->getSkin()), $player->getXuid())]));
+                    parent::sendDataPacket(PlayerListPacket::create([PlayerListEntry::createAdditionEntry($uniqueId = $player->getUniqueId(), $internalActorRuntimeId, $player->getDisplayName(), $this->getTypeConverter()->getSkinAdapter()->toSkinData($player->getSkin()), $player->getXuid())]));
 
                     if ($player instanceof NGPlayer) {
                         $playerData = NGEssentials::getInstance()->getPlayerData();
@@ -179,7 +179,7 @@ class Filmroll extends NetworkSession
                     $packet->actorRuntimeId = $internalActorRuntimeId;
                     parent::sendDataPacket($packet, $immediate);
 
-                    parent::sendDataPacket(PlayerListPacket::remove([PlayerListEntry::createRemovalEntry($uniqueId)]));
+                    parent::sendDataPacket(PlayerListPacket::create([PlayerListEntry::createRemovalEntry($uniqueId)]));
                 } elseif (($internalActorRuntimeId = $convertor->getInternalId($packet->actorRuntimeId)) !== null) {
                     foreach ($packet->links as $index => $link) {
                         if (!$this->convertLink($link)) {

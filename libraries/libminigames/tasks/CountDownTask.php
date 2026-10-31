@@ -84,7 +84,8 @@ class CountDownTask extends Task
 
         if ($this->countdown > 15 && $joinedPlayers === $maxPlayers) {
             $this->setCountdown(15);
-        } elseif ($this->countdown > self::COUNTDOWN && $joinedPlayers >= $maxPlayers / 2) {
+        } elseif ($this->countdown > self::COUNTDOWN && $joinedPlayers >= (int) (getenv('NG_MIN_PLAYERS') ?: $maxPlayers / 2)) {
+            // COMPAT 2026-10-27: NG_MIN_PLAYERS 可覆盖默认阈值（默认仍是 最大人数/2）
             $this->setCountdown(self::COUNTDOWN);
         }
 

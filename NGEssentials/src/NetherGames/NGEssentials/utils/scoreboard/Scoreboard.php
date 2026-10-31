@@ -27,6 +27,7 @@ use pocketmine\network\mcpe\protocol\{ClientboundPacket,
     SetDisplayObjectivePacket,
     SetScorePacket};
 use pocketmine\network\mcpe\protocol\types\ScorePacketEntry;
+use pocketmine\network\mcpe\protocol\types\ScorePacketEntryAction;
 use pocketmine\player\Player;
 use function array_key_first;
 use function count;
@@ -112,17 +113,16 @@ class Scoreboard
                     $message = str_repeat(' ', $line - 1);
                 }
 
-                $entry->type = ScorePacketEntry::TYPE_FAKE_PLAYER;
+                $entry->action = ScorePacketEntryAction::CHANGE_FAKE_PLAYER;
                 $entry->customName = $message . ' ';
+            } else {
+                $entry->action = ScorePacketEntryAction::REMOVE;
             }
 
             $entries[] = $entry;
         }
 
-        return SetScorePacket::create(
-            $type,
-            $entries
-        );
+        return SetScorePacket::create($entries);
     }
 
     /**

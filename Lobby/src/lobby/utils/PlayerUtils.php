@@ -13,15 +13,7 @@ class PlayerUtils
     public static function playSound(Player $player, string $soundName, int $pitch): void
     {
         $player->getNetworkSession()->sendDataPacket(
-            PlaySoundPacket::create(
-                $soundName,
-                $player->getLocation()->getX(),
-                $player->getLocation()->getY(),
-                $player->getLocation()->getZ(),
-                100,
-                $pitch,
-                null
-            )
+            PlaySoundPacket::create($soundName, $player->getLocation()->getX(), $player->getLocation()->getY(), $player->getLocation()->getZ(), 100, $pitch, 0, false, null, null)
         );
     }
 

@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace survivalgames;
 
+use libminigames\events\MinigameQuitEvent;
 use libminigames\MinigameListener;
+use NetherGames\NGEssentials\events\NGJoinEvent;
+use NetherGames\NGEssentials\NGEssentials;
+use pocketmine\scheduler\ClosureTask;
 use libVanilla\entity\object\FishingHook;
 use libVanilla\event\fishing\FishingRodRetractionEvent;
 use NetherGames\NGEssentials\player\Translator;
@@ -33,6 +37,42 @@ class SGListener extends MinigameListener
 {
     /** @var int[][] */
     private array $cooldown = [];
+
+    /**
+     * COMPAT 2026-10-28: 单服开发模式下没有大厅服派发，SG 原来也没有 onNGJoin，
+     * 玩家会一直停在 Hub 里进不了对局。这里连入即入队（SG 只有一个模式）。
+     */
+    public function onNGJoin(NGJoinEvent $event): void
+    {
+        if (NGEssentials::isInDevelopmentMode()) {
+            $this->getPlugin()->joinArena($event->getPlayer(), 0);
+        }
+    }
+
+    /**
+     * 打完一局会被送回 Hub，不重新入队就只能重连（NG_AUTO_REQUEUE=0 可关）。
+     */
+    public function onMinigameQuit(MinigameQuitEvent $event): void
+    {
+        if (!NGEssentials::isInDevelopmentMode() || getenv('NG_AUTO_REQUEUE') === '0') {
+            return;
+        }
+
+        $reason = $event->getReason();
+        if ($reason === MinigameQuitEvent::DISCONNECT || $reason === MinigameQuitEvent::DISCONNECT_KICK) {
+            return;
+        }
+
+        $player = $event->getPlayer();
+
+        $this->getPlugin()->getScheduler()->scheduleDelayedTask(new ClosureTask(function () use ($player): void {
+            if ($player->isOnline() && $this->getPlugin()->getArena($player) === null) {
+                $player->sendMessage('§a已离开对局，正在重新排队…');
+                $this->getPlugin()->joinArena($player, 0);
+            }
+        }), 60);
+    }
+
 
     /**
      * Returns if an item is on cooldown based on seconds passed to var $cooldown

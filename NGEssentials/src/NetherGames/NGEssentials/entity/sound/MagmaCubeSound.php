@@ -34,10 +34,6 @@ class MagmaCubeSound implements Sound
 
     public function encode(Vector3 $pos): array
     {
-        return [PlaySoundPacket::create(
-            "mob.magmacube." . ($this->isSmall ? "small" : "big"),
-            $pos->x, $pos->y, $pos->z,
-            1, mt_rand(64, 96) / 100, null
-        )];
+        return [PlaySoundPacket::create("mob.magmacube." . ($this->isSmall ? "small" : "big"), $pos->x, $pos->y, $pos->z, 1, mt_rand(64, 96) / 100, 0, false, null, null)];
     }
 }

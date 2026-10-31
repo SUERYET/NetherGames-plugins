@@ -95,6 +95,13 @@ abstract class TeamArena extends Arena
 
     public function getMinimumPlayers(): int
     {
+        // COMPAT 2026-10-27: 默认仍是"2 × 队伍人数"，但允许 NG_MIN_PLAYERS 覆盖，
+        // 否则单机调试时 1 个人永远开不了局（TeamArena 的覆写会盖掉父类）。
+        $override = getenv('NG_MIN_PLAYERS');
+        if ($override !== false && $override !== '') {
+            return max(1, (int) $override);
+        }
+
         return 2 * $this->getTeamSize();
     }
 

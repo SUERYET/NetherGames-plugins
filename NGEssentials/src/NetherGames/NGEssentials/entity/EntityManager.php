@@ -41,6 +41,7 @@ use pocketmine\network\mcpe\NetworkBroadcastUtils;
 use pocketmine\network\mcpe\protocol\AvailableActorIdentifiersPacket;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
 use pocketmine\network\mcpe\protocol\PlayerListPacket;
+use NetherGames\NGEssentials\utils\PlayerListCompat;
 use pocketmine\network\mcpe\protocol\types\CacheableNbt;
 use pocketmine\network\mcpe\protocol\types\PlayerListEntry;
 use pocketmine\player\Player;
@@ -159,8 +160,8 @@ class EntityManager extends BaseClass
             }
 
             if (count($entries) > 0) {
-                array_unshift($packets, PlayerListPacket::add($entries));
-                $packets[] = PlayerListPacket::remove($entries);
+                array_unshift($packets, PlayerListPacket::create($entries));
+                $packets[] = PlayerListCompat::createRemoval($entries);
             }
 
             return $packets;

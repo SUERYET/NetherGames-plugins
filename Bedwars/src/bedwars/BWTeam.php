@@ -573,11 +573,21 @@ final class BWTeam extends Team
         $name = ucwords(str_replace("_", " ", $this->getName()));
         $prefix = TextFormat::BOLD . $this->getColor() . $letter . TextFormat::RESET . ' ' . $name . ':';
 
-        return match (true) {
-            ($playerCount = count($this->getAlivePlayers())) === 0 => $prefix . CustomIcon::NO,
-            $this->isBedAlive() => $prefix . CustomIcon::YES,
-            default => $prefix . ' ' . TextFormat::GREEN . $playerCount
-        };
+        // COMPAT 2026-10-27: 官方材质包缺失时，CustomIcon 的私有区字形（\u{E1DE}/\u{E1DF}）
+        // 在客户端显示为空白，床的状态完全看不见。改用纯文本 √ / × 表达，不依赖资源包。
+        $playerCount = count($this->getAlivePlayers());
+        if ($playerCount === 0) {
+            // 团灭：红叉
+            return $prefix . ' ' . TextFormat::RED . '✘';
+        }
+
+        if ($this->isBedAlive()) {
+            // 床还在：绿勾
+            return $prefix . ' ' . TextFormat::GREEN . '✔';
+        }
+
+        // 床没了但人还活着：只显示剩余人数
+        return $prefix . ' ' . TextFormat::GREEN . $playerCount;
     }
 
     private function getTeamIndex(): int

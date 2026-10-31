@@ -25,7 +25,15 @@ use bedwars\shops\menu\ShopMenu;
 use bedwars\shops\menu\UpgraderMenu;
 use bedwars\tasks\BlockQueueTask;
 use bedwars\utils\BWArenaConfig;
+use bedwars\utils\entity\BridgeEgg;
+use bedwars\utils\entity\EnderDragon;
 use bedwars\utils\entity\ItemEntity;
+use bedwars\utils\entity\Landmine;
+use bedwars\utils\entity\PrimedTNT;
+use bedwars\utils\entity\Snowball;
+use bedwars\utils\entity\mob\Bedbug;
+use bedwars\utils\entity\mob\DreamDefender;
+use bedwars\utils\entity\mob\MiniSkeleton;
 use libminigames\Arena;
 use libminigames\Minigame;
 use libminigames\TeamArena;
@@ -118,6 +126,35 @@ final class Bedwars extends Minigame
             return new ItemEntity(Helper::parseLocation($nbt, $world), $item, $nbt);
         }, ['Item', 'minecraft:item']);
 
+        // COMPAT 2026-10-27: 新版 PMMP 要求"所有会进入世界的实体类"都在 EntityFactory 注册，
+        // 否则 World::addEntity() 直接抛 LogicException（实测：放一个 TNT 就崩服）。
+        // 这些实体都在构造时 setCanSaveWithChunk(false)，存档名只用于满足工厂校验，不会真的落盘。
+        $entityFactory->register(PrimedTNT::class, function (World $world, CompoundTag $nbt): PrimedTNT {
+            return new PrimedTNT(Helper::parseLocation($nbt, $world), $nbt);
+        }, ['ng:primed_tnt']);
+        $entityFactory->register(Landmine::class, static function (World $world, CompoundTag $nbt): Landmine {
+            throw new SavedDataLoadingException("Landmine is not persistent");
+        }, ['ng:landmine']);
+        $entityFactory->register(BridgeEgg::class, static function (World $world, CompoundTag $nbt): BridgeEgg {
+            throw new SavedDataLoadingException("BridgeEgg is not persistent");
+        }, ['ng:bridge_egg']);
+        $entityFactory->register(Snowball::class, static function (World $world, CompoundTag $nbt): Snowball {
+            throw new SavedDataLoadingException("Snowball is not persistent");
+        }, ['ng:snowball']);
+        $entityFactory->register(EnderDragon::class, static function (World $world, CompoundTag $nbt): EnderDragon {
+            throw new SavedDataLoadingException("EnderDragon is not persistent");
+        }, ['ng:ender_dragon']);
+        // 蠹虫/梦境守卫/小骷髅：商店道具召唤的生物，同样是"进入世界就必须注册"。
+        $entityFactory->register(Bedbug::class, function (World $world, CompoundTag $nbt): Bedbug {
+            return new Bedbug(Helper::parseLocation($nbt, $world), $nbt);
+        }, ['ng:bedbug']);
+        $entityFactory->register(DreamDefender::class, function (World $world, CompoundTag $nbt): DreamDefender {
+            return new DreamDefender(Helper::parseLocation($nbt, $world), $nbt);
+        }, ['ng:dream_defender']);
+        $entityFactory->register(MiniSkeleton::class, function (World $world, CompoundTag $nbt): MiniSkeleton {
+            return new MiniSkeleton(Helper::parseLocation($nbt, $world), $nbt);
+        }, ['ng:mini_skeleton']);
+
         $this->blockQueue = new BlockQueueTask($this->getServer());
         $this->getScheduler()->scheduleRepeatingTask($this->blockQueue, 10);
 
@@ -141,7 +178,7 @@ final class Bedwars extends Minigame
         VanillaPlugin::FIREBALL()->register($this);
 
         foreach ($this->getModes() as $i => $mode) {
-            $this->getLeaderboards()->load('bw_*mode*_wins', $i, -1, '§l§a*MODE* WINS LEADERBOARD', '§7Most Bedwars *mode* wins');
+            $this->getLeaderboards()->load('bw_*mode*_wins', $i, -1, '§l§a*MODE* WINS LEADERBOARD', '§7Since 2026-10-27 · Bedwars *mode* wins');
         }
     }
 

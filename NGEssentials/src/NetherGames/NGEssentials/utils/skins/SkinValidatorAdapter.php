@@ -56,7 +56,11 @@ class SkinValidatorAdapter extends LegacySkinAdapter
     public function toSkinData(Skin $skin): SkinData
     {
         $skinData = parent::toSkinData($skin);
-        $skinData->setVerified(true);
+        // COMPAT 2026-10-27: 新版 PocketMine 的 SkinData 已移除 setVerified()
+        // （插件代码停更于 2026-09，而依赖声明为 dev-stable，构建时会取到最新版）。
+        if (method_exists($skinData, "setVerified")) {
+            $skinData->setVerified(true);
+        }
 
         return $skinData;
     }

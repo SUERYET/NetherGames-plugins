@@ -283,7 +283,9 @@ class MinigameListener implements Listener
     public function onNGLogin(NGLoginEvent $event): void
     {
         $plugin = $this->getPlugin();
-        if (!NGEssentials::isInDevelopmentMode() && $plugin->isStandAloneGame()) {
+        // COMPAT 2026-10-27: 本机没有代理(WaterdogPE)，开发模式下也要能自动入院，
+        // 否则玩家只会停在 sub-lobby 而不会进入任何竞技场。
+        if ($plugin->isStandAloneGame() || NGEssentials::isInDevelopmentMode()) {
             $player = $event->getPlayer();
             $ess = $plugin->getEssentials();
 

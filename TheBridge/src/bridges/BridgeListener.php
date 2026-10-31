@@ -24,8 +24,10 @@ declare(strict_types=1);
 namespace bridges;
 
 use bridges\utils\InvMenuListenerUtils;
+use libminigames\events\MinigameQuitEvent;
 use libminigames\Minigame;
 use libminigames\MinigameListener;
+use libminigames\TeamArena;
 use muqsit\invmenu\inventory\InvMenuInventory;
 use NetherGames\NGEssentials\events\NGJoinEvent;
 use NetherGames\NGEssentials\events\NGLoginEvent;
@@ -34,6 +36,7 @@ use NetherGames\NGEssentials\player\PlayerData;
 use pocketmine\event\inventory\InventoryOpenEvent;
 use pocketmine\event\inventory\InventoryTransactionEvent;
 use pocketmine\inventory\PlayerInventory;
+use pocketmine\scheduler\ClosureTask;
 use pocketmine\utils\TextFormat;
 
 class BridgeListener extends MinigameListener
@@ -45,6 +48,13 @@ class BridgeListener extends MinigameListener
      */
     public function onNGJoin(NGJoinEvent $event): void
     {
+        // COMPAT 2026-10-28: 单服开发模式下没有大厅服负责派发，而这里的逻辑整体被
+        // !isInDevelopmentMode() 包着，导致玩家会一直停在 Hub 里进不了对局。
+        if (NGEssentials::isInDevelopmentMode()) {
+            $this->getPlugin()->joinArena($event->getPlayer(), $this->resolveModeId());
+            return;
+        }
+
         if (!NGEssentials::isInDevelopmentMode()) {
             $player = $event->getPlayer();
             $plugin = $this->getPlugin();
@@ -69,6 +79,41 @@ class BridgeListener extends MinigameListener
                 }
             }
         }
+    }
+
+    /**
+     * COMPAT 2026-10-28: 一局打完会被送回 Hub，而 onNGJoin 只在连入时触发一次，
+     * 不重新入队就只能重连。退出后延迟 3 秒自动重新排队（NG_AUTO_REQUEUE=0 可关）。
+     */
+    public function onMinigameQuit(MinigameQuitEvent $event): void
+    {
+        if (!NGEssentials::isInDevelopmentMode() || getenv('NG_AUTO_REQUEUE') === '0') {
+            return;
+        }
+
+        $reason = $event->getReason();
+        if ($reason === MinigameQuitEvent::DISCONNECT || $reason === MinigameQuitEvent::DISCONNECT_KICK) {
+            return;
+        }
+
+        $player = $event->getPlayer();
+        $modeId = $this->resolveModeId();
+
+        $this->getPlugin()->getScheduler()->scheduleDelayedTask(new ClosureTask(function () use ($player, $modeId): void {
+            if ($player->isOnline() && $this->getPlugin()->getArena($player) === null) {
+                $player->sendMessage('§a已离开对局，正在重新排队…');
+                $this->getPlugin()->joinArena($player, $modeId);
+            }
+        }), 60);
+    }
+
+    /** 模式由环境变量 NG_TB_MODE 决定（默认 solo） */
+    private function resolveModeId(): int
+    {
+        return match (strtolower(getenv('NG_TB_MODE') ?: 'solo')) {
+            'doubles', 'double', '2' => TeamArena::MODE_DOUBLES,
+            default => TeamArena::MODE_SOLO,
+        };
     }
 
     /**

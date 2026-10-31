@@ -29,6 +29,7 @@ use pocketmine\network\mcpe\protocol\AddPlayerPacket;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
 use pocketmine\network\mcpe\protocol\MovePlayerPacket;
 use pocketmine\network\mcpe\protocol\PlayerListPacket;
+use NetherGames\NGEssentials\utils\PlayerListCompat;
 use pocketmine\network\mcpe\protocol\PlayerSkinPacket;
 use pocketmine\network\mcpe\protocol\types\AbilitiesData;
 use pocketmine\network\mcpe\protocol\types\AbilitiesLayer;
@@ -81,7 +82,7 @@ class CustomHuman extends Custom
             ProtocolGameMode::SURVIVAL,
             $this->metadata->getAll(),
             new PropertySyncData([], []),
-            UpdateAbilitiesPacket::create(new AbilitiesData(CommandPermissions::NORMAL, PlayerPermissions::VISITOR, $this->getId() /* TODO: this should be unique ID */, [
+            new AbilitiesData(CommandPermissions::NORMAL, PlayerPermissions::VISITOR, $this->getId() /* TODO: this should be unique ID */, [
                 new AbilitiesLayer(
                     AbilitiesLayer::LAYER_BASE,
                     array_fill(0, AbilitiesLayer::NUMBER_OF_ABILITIES, false),
@@ -89,8 +90,11 @@ class CustomHuman extends Custom
                     0.0,
                     0.0
                 )
-            ])),
+            ]),
             [],
+            // COMPAT 2026-10-28: protocol 2225 起 AddPlayerPacket::create() 多了一个
+            // ?PassengerOfBlockData 参数（第 16 位），原来的 deviceId 被挤到第 17 位。
+            null,
             "",
             DeviceOS::UNKNOWN
         );
@@ -104,11 +108,11 @@ class CustomHuman extends Custom
     public function spawn(Player $player): void
     {
         $networkSession = $player->getNetworkSession();
-        $networkSession->sendDataPacket(PlayerListPacket::add([$entry = $this->getListEntry($networkSession->getTypeConverter())]));
+        $networkSession->sendDataPacket(PlayerListPacket::create([$entry = $this->getListEntry($networkSession->getTypeConverter())]));
 
         parent::spawn($player);
 
-        $networkSession->sendDataPacket(PlayerListPacket::remove([$entry]));
+        $networkSession->sendDataPacket(PlayerListCompat::createRemoval([$entry]));
     }
 
     public function getListEntry(TypeConverter $typeConverter): PlayerListEntry

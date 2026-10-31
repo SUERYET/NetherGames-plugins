@@ -177,12 +177,46 @@ class SocialManager extends PlayerBaseClass
     {
         Utils::validateCallableSignature(function (array $info): void {}, $callback);
 
-        NGEssentials::getInstance()->getLogger()->info("Social feature (requestPlayerInfos) is currently unavailable.");
+        // COMPAT 2026-10-28: 上游这里是空桩——只打一行日志，然后给每个 identifier 返回 null。
+        // 结果是好友列表 / 公会成员列表里除了"本服在线且走另一条分支"的人以外，全部显示 Offline。
+        // 我们只有一台服，本地在线列表就是全部真相：能查到的直接返回"在本服"的 PlayerSocialInfo，
+        // 查不到才返回 null（真离线）。
+        $plugin = NGEssentials::getInstance();
+        $server = $plugin->getServer();
+        $serverManager = $plugin->getServerManager();
+        $uniqueId = $serverManager->getUniqueId();
 
-        $callback(array_combine(
-            $identifiers,
-            array_fill(0, count($identifiers), null)
-        ));
+        $result = [];
+        foreach ($identifiers as $identifier) {
+            $target = $server->getPlayerExact($identifier);
+
+            if (!$target instanceof Player) {
+                // identifier 也可能是 XUID（公会/好友里两个都可能出现）
+                foreach ($server->getOnlinePlayers() as $online) {
+                    if ($online instanceof NGPlayer && $online->getXuid() === (string)$identifier) {
+                        $target = $online;
+                        break;
+                    }
+                }
+            }
+
+            if ($target instanceof NGPlayer) {
+                $info = new PlayerSocialInfo();
+                $info->sourceUid = $uniqueId;
+                $info->proxyId = '';
+                $info->playerName = $target->getName();
+                $info->playerIdentifier = $target->getXuid();
+                $info->location = $uniqueId;
+                $info->address = $target->getNetworkSession()->getIp();
+                $info->connectionId = '';
+
+                $result[$identifier] = $info;
+            } else {
+                $result[$identifier] = null;
+            }
+        }
+
+        $callback($result);
     }
 
     /**

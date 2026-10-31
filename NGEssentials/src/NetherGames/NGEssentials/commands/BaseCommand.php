@@ -90,6 +90,7 @@ abstract class BaseCommand extends Command
         $commandMap->register(ReplyCommand::class, new ReplyCommand($ess));
         $commandMap->register(ReportCommand::class, new ReportCommand($ess));
         $commandMap->register(StaffportalCommand::class, new StaffportalCommand($ess));
+        $commandMap->register(SettingsCommand::class, new SettingsCommand($ess));
         $commandMap->register(StatsCommand::class, new StatsCommand($ess));
         $commandMap->register(TellCommand::class, new TellCommand($ess));
         $commandMap->register(TrackCommand::class, new TrackCommand($ess));

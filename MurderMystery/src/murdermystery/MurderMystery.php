@@ -32,8 +32,14 @@ use murdermystery\gamemodes\MMArena;
 use murdermystery\utils\MMArenaConfig;
 use murdermystery\utils\MMChance;
 use murdermystery\utils\MMKnife;
+use murdermystery\utils\MMPlayer;
 use NetherGames\NGEssentials\ServerManager;
+use pocketmine\entity\Entity;
+use pocketmine\entity\EntityFactory;
+use pocketmine\entity\SavedDataLoadingException;
+use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\utils\Config;
+use pocketmine\world\World;
 use function array_filter;
 use function is_dir;
 
@@ -70,6 +76,22 @@ class MurderMystery extends Minigame
         $this->getServer()->getCommandMap()->register(MMCommand::class, new MMCommand($this));
 
         $this->getServer()->getPluginManager()->registerEvents(new MinigameListener($this), $this);
+
+        // COMPAT 2026-10-28: 单服开发模式下补"连入即入队"（基类 MinigameListener 没有 onNGJoin）
+        $this->getServer()->getPluginManager()->registerEvents(new MMListener($this), $this);
+
+        // COMPAT 2026-10-28: 新版 PMMP 要求所有会进入世界的实体都注册，否则 addEntity 抛 LogicException
+        $entityFactory = EntityFactory::getInstance();
+        foreach ([MMPlayer::class, MMKnife::class] as $class) {
+            if ($entityFactory->isRegistered($class)) {
+                continue;
+            }
+
+            $shortName = substr($class, (int)strrpos($class, '\\') + 1);
+            $entityFactory->register($class, static function (World $world, CompoundTag $nbt) use ($shortName): Entity {
+                throw new SavedDataLoadingException($shortName . ' is not persistent');
+            }, ['ng:mm_' . strtolower($shortName)]);
+        }
 
         MMKnife::setup();
     }

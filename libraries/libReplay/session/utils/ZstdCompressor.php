@@ -47,7 +47,9 @@ final class ZstdCompressor implements Compressor
         $this->level = $level;
     }
 
-    public function getNetworkId(): int
+    // COMPAT 2026-10-27: Compressor 接口在 2026-10 版本里
+    // 把 getNetworkId(): int 换成了 getNetworkType(): CompressionAlgorithm（枚举）。
+    public function getNetworkType(): CompressionAlgorithm
     {
         return CompressionAlgorithm::ZLIB;
     }

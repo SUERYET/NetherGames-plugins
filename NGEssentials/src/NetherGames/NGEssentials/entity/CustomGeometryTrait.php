@@ -46,7 +46,7 @@ trait CustomGeometryTrait
         $name = $this->getName();
         $networkSession = $player->getNetworkSession();
 
-        $networkSession->sendDataPacket(PlayerListPacket::add([
+        $networkSession->sendDataPacket(PlayerListPacket::create([
             PlayerListEntry::createAdditionEntry($this->skinUuid, $entityID, $name, $networkSession->getTypeConverter()->getSkinAdapter()->toSkinData($skin))
         ]));
 
@@ -58,7 +58,7 @@ trait CustomGeometryTrait
             ProtocolGameMode::SURVIVAL,
             $this->getAllNetworkData(),
             new PropertySyncData([], []),
-            UpdateAbilitiesPacket::create(new AbilitiesData(CommandPermissions::NORMAL, PlayerPermissions::VISITOR, $this->getId() /* TODO: this should be unique ID */, [
+            new AbilitiesData(CommandPermissions::NORMAL, PlayerPermissions::VISITOR, $this->getId() /* TODO: this should be unique ID */, [
                 new AbilitiesLayer(
                     AbilitiesLayer::LAYER_BASE,
                     array_fill(0, AbilitiesLayer::NUMBER_OF_ABILITIES, false),
@@ -66,12 +66,13 @@ trait CustomGeometryTrait
                     0.0,
                     0.0
                 )
-            ])),
+            ]),
             array_values($this->links),
+            null, // COMPAT 2026-10-28: protocol 2225 新增 ?PassengerOfBlockData
             "", DeviceOS::UNKNOWN
         ));
 
-        $networkSession->sendDataPacket(PlayerListPacket::remove([PlayerListEntry::createRemovalEntry($this->skinUuid)]));
+        $networkSession->sendDataPacket(PlayerListPacket::create([PlayerListEntry::createRemovalEntry($this->skinUuid)]));
     }
 
     abstract public function getSkin(): Skin;

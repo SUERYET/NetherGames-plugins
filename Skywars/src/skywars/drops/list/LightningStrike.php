@@ -47,7 +47,8 @@ class LightningStrike extends BaseDrop
             [],
             [],
             new PropertySyncData([], []),
-            []
+            [],
+            null, // COMPAT 2026-10-28: protocol 2225 新增 ?PassengerOfBlockData
         );
         $player->getWorld()->broadcastPacketToViewers($location->asVector3(), $packet);
 

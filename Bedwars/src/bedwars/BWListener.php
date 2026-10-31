@@ -23,6 +23,7 @@ namespace bedwars;
 
 use bedwars\utils\entity\ItemEntity;
 use libminigames\Minigame;
+use libminigames\events\MinigameQuitEvent;
 use libminigames\MinigameListener;
 use libVanilla\item\Fireball;
 use NetherGames\NGEssentials\events\NGJoinEvent;
@@ -41,6 +42,7 @@ use pocketmine\event\player\PlayerQuitEvent;
 use pocketmine\event\server\DataPacketReceiveEvent;
 use pocketmine\event\world\ChunkLoadEvent;
 use pocketmine\math\Facing;
+use pocketmine\scheduler\ClosureTask;
 use pocketmine\network\mcpe\protocol\LevelSoundEventPacket;
 use pocketmine\network\mcpe\protocol\types\InputMode;
 use pocketmine\network\mcpe\protocol\types\LevelSoundEvent;
@@ -53,8 +55,65 @@ final class BWListener extends MinigameListener
      *
      * @priority NORMAL
      */
+    private function resolveModeId(): int
+    {
+        $mode = strtolower(getenv('NG_BW_MODE') ?: 'solo');
+
+        return match ($mode) {
+            '1v1', 'versus' => BWArena::MODE_VERSUS_ONE,
+            '2v2' => BWArena::MODE_VERSUS_TWO,
+            'doubles', 'double' => \libminigames\TeamArena::MODE_DOUBLES,
+            'trios' => \libminigames\TeamArena::MODE_TRIOS,
+            'squads' => \libminigames\TeamArena::MODE_SQUADS,
+            default => \libminigames\TeamArena::MODE_SOLO,
+        };
+    }
+
+    /**
+     * COMPAT 2026-10-27: 单服开发模式下没有大厅负责派发。
+     * 玩家用"Return to Lobby"退出竞技场后会停在 Hub，再也进不来
+     * （onNGJoin 只在连入那一刻触发一次）。
+     * 这里在退出后延迟 3 秒自动重新排队，让它表现得像"重新匹配"。
+     *
+     * @param MinigameQuitEvent $event
+     *
+     * @priority MONITOR
+     */
+    public function onMinigameQuit(MinigameQuitEvent $event): void
+    {
+        if (!NGEssentials::isInDevelopmentMode() || getenv('NG_AUTO_REQUEUE') === '0') {
+            return;
+        }
+
+        $reason = $event->getReason();
+        if ($reason === MinigameQuitEvent::DISCONNECT || $reason === MinigameQuitEvent::DISCONNECT_KICK) {
+            return;
+        }
+
+        $player = $event->getPlayer();
+        $modeId = $this->resolveModeId();
+
+        $this->getPlugin()->getScheduler()->scheduleDelayedTask(new ClosureTask(function () use ($player, $modeId): void {
+            // 退出可能被取消（例如队伍里还有人），此时玩家仍在竞技场内，不要重复入队
+            if ($player->isOnline() && $this->getPlugin()->getArena($player) === null) {
+                $player->sendMessage('§a已离开对局，正在重新排队…');
+                $this->getPlugin()->joinArena($player, $modeId);
+            }
+        }), 60);
+    }
+
     public function onNGJoin(NGJoinEvent $event): void
     {
+        // COMPAT 2026-10-27: 本机没有 WaterdogPE 代理，开发模式下没有大厅服负责派发，
+        // 玩家会永远停在 sub-lobby。这里直接让 Bedwars 自己把玩家送进竞技场。
+        // 注意：MinigameListener 的通用入院逻辑只有 MurderMystery 注册，Bedwars 不生效。
+        if (NGEssentials::isInDevelopmentMode()) {
+            // 模式由环境变量 NG_BW_MODE 决定（默认 solo）。
+            // 地图前缀：BW8-* → solo/doubles，BW4-* → trios/squads，BWD-* → 1v1/2v2
+            $this->getPlugin()->joinArena($event->getPlayer(), $this->resolveModeId());
+            return;
+        }
+
         if (!NGEssentials::isInDevelopmentMode()) {
             $player = $event->getPlayer();
             $plugin = $this->getPlugin();

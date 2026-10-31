@@ -56,7 +56,8 @@ class CustomFlagEntity extends BaseFlagEntity
             $this->getAllNetworkData(),
             new PropertySyncData([], []),
             [] //TODO: entity links
-        ));
+        ,
+            null /* COMPAT 2026-10-28: protocol 2225 ?PassengerOfBlockData */));
 
         if ($this->linkPacket !== null) {
             $networkSession->sendDataPacket($this->linkPacket);

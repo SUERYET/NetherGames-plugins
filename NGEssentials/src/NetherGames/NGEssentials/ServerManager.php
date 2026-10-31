@@ -689,6 +689,20 @@ class ServerManager extends BaseClass
         $this->spawnLocation = $location;
     }
 
+    /**
+     * 这个服务器类型有没有"专门写的等待大厅坐标"。
+     * 没有的话 getSpawn() 会退回默认世界的出生点——把那个坐标搬进竞技场世界就是虚空
+     * （实测 SurvivalGames 一进服就无限掉落）。这类游戏应该用竞技场世界自己的出生点。
+     */
+    public function hasDedicatedSpawn(): bool
+    {
+        return in_array($this->getServerType(), [
+            self::BW, self::MM, self::TB, self::DUELS, self::SW,
+            self::FACTIONS, self::SB, self::CREATIVE, self::MD,
+            self::LOBBY, self::SETUP,
+        ], true);
+    }
+
     public function getSpawn(string $identifier = ''): Location
     {
         // Use the given spawn location that is set (In factions, the spawn location are different).

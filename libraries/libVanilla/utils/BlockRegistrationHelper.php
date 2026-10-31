@@ -194,7 +194,13 @@ final class BlockRegistrationHelper
     {
         self::registerBlock($block);
         self::mapBlockSerializerDeserializer($block, $id);
-        self::addToCreativeInventory($block);
+        // WORKAROUND 2026-10-27:
+        // 这些补丁方块没有登记进客户端自定义方块调色板（BlockPaletteEntry），
+        // 一旦进入创造物品栏，玩家加入时构造创造性物品包会抛
+        // "Unmapped blockstate returned by blockstate serializer" 并崩服。
+        // 暂时不加进创造栏；方块本身仍注册、仍可用于世界。
+        // 还原：取消下一行注释。
+        // self::addToCreativeInventory($block);
     }
 
     /**

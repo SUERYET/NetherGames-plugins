@@ -62,7 +62,8 @@ trait RideableTrait
             }, $this->attributeMap->getAll()),
             $this->getAllNetworkData(),
             new PropertySyncData([], []),
-            array_values($this->links)
+            array_values($this->links),
+            null, // COMPAT 2026-10-28: protocol 2225 新增 ?PassengerOfBlockData
         ));
     }
 

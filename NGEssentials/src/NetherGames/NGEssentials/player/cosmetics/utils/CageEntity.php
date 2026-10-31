@@ -45,7 +45,8 @@ class CageEntity extends Custom
             [],
             $this->metadata->getAll(),
             new PropertySyncData([], []),
-            []
+            [],
+            null, // COMPAT 2026-10-28: protocol 2225 新增 ?PassengerOfBlockData
         );
     }
 

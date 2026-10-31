@@ -29,7 +29,12 @@ use libminigames\utils\LeaderboardData;
 use libVanilla\features\Feature;
 use libVanilla\VanillaPlugin;
 use NetherGames\NGEssentials\ServerManager;
+use pocketmine\entity\Entity;
+use pocketmine\entity\EntityFactory;
+use pocketmine\entity\SavedDataLoadingException;
+use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\utils\Config;
+use pocketmine\world\World;
 use skywars\drops\DropManager;
 use skywars\kits\KitManager;
 use skywars\tasks\BlockQueueTask;
@@ -53,6 +58,8 @@ class Skywars extends Minigame
 
     public function registerClasses(): void
     {
+        $this->registerEntities();
+
         $arenaConfig = new Config($this->getDataFolder() . 'arenas.yml', Config::YAML, ['arenas' => []]);
         $arenaConfig->save();
         $this->arenaConfig = new SWArenaConfig($arenaConfig);
@@ -74,7 +81,7 @@ class Skywars extends Minigame
 
         $this->leaderboards = new LeaderboardData($this->getModes());
         foreach ($this->getModes() as $i => $mode) {
-            $this->getLeaderboards()->load('sw_*mode*_wins', $i, -1, '§l§a*MODE* WINS LEADERBOARD', '§7Most SkyWars *mode* wins');
+            $this->getLeaderboards()->load('sw_*mode*_wins', $i, -1, '§l§a*MODE* WINS LEADERBOARD', '§7Since 2026-10-27 · SkyWars *mode* wins');
             $this->getLeaderboards()->load('sw_*mode*_kills', $i, -1, '§l§a*MODE* KILLS LEADERBOARD', '§7Most SkyWars *mode* kills');
         }
     }
@@ -82,6 +89,54 @@ class Skywars extends Minigame
     /**
      * @return array<Feature>
      */
+    /**
+     * COMPAT 2026-10-28: 新版 PMMP 要求"所有会进入世界的实体类"都在 EntityFactory 注册，
+     * 否则 World::addEntity() 直接抛 LogicException（实测：抛一次鱼竿就崩服）。
+     * 这些实体在构造时都 setCanSaveWithChunk(false)，注册时给的回调只在"从区块读档"时才会被调用，
+     * 实际永远不会触发，所以直接抛异常即可。
+     */
+    private function registerEntities(): void
+    {
+        $entityFactory = EntityFactory::getInstance();
+
+        $classes = [
+            // 本插件自己的实体
+            entities\DinnerboneSheep::class,
+            entities\EnderDragon::class,
+            entities\JebSheep::class,
+            entities\LuckyBlock::class,
+            entities\PrimedTNT::class,
+            entities\SWEnderPearl::class,
+            entities\SWPlayer::class,
+            entities\SWSkeleton::class,
+            entities\SWSplashPotion::class,
+            entities\SWZombie::class,
+            entities\TobiZombie::class,
+            // libVanilla 提供的实体（鱼竿 / 弩 / 掉落物里的生物）
+            \libVanilla\entity\object\FishingHook::class,
+            \libVanilla\entity\object\CrossbowArrow::class,
+            \libVanilla\entity\object\Fireball::class,
+            \libVanilla\entity\passive\Chicken::class,
+            \libVanilla\entity\passive\Sheep::class,
+            \libVanilla\entity\hostile\Ghast::class,
+            \libVanilla\entity\hostile\Zombie::class,
+            \libVanilla\entity\hostile\Skeleton::class,
+            \libVanilla\entity\neutral\Enderman::class,
+        ];
+
+        foreach ($classes as $class) {
+            if (!class_exists($class, true)) {
+                continue;
+            }
+            $shortName = substr($class, (int)strrpos($class, '\\') + 1);
+            // COMPAT 2026-10-28: PMMP 5.51 起会校验回调签名，必须严格是
+            // function (World $world, CompoundTag $nbt): Entity
+            $entityFactory->register($class, static function (World $world, CompoundTag $nbt) use ($shortName): Entity {
+                throw new SavedDataLoadingException($shortName . " is not persistent");
+            }, ['ng:skywars_' . strtolower($shortName)]);
+        }
+    }
+
     public function getRequiredFeatures(): array
     {
         return [

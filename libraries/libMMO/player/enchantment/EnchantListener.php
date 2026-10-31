@@ -649,7 +649,8 @@ class EnchantListener extends BaseListener
                                 [],
                                 new PropertySyncData([], []),
                                 []
-                            )
+                            ,
+            null /* COMPAT 2026-10-28: protocol 2225 ?PassengerOfBlockData */)
                         ]);
 
                         $event->setModifier(ThorEnchantment::THOR_DAMAGE + $event->getModifier(EntityDamageEvent::MODIFIER_WEAPON_ENCHANTMENTS), EntityDamageEvent::MODIFIER_WEAPON_ENCHANTMENTS);

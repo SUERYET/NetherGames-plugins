@@ -74,7 +74,8 @@ abstract class EffectCosmetic extends Cosmetic
                         [],
                         [],
                         new PropertySyncData([], []),
-                        []
+                        [],
+                        null, // COMPAT 2026-10-28: protocol 2225 新增 ?PassengerOfBlockData
                     )
                 ]);
             }

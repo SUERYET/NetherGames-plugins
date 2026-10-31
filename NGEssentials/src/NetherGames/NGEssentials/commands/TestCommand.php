@@ -125,7 +125,8 @@ class TestCommand extends BaseCommand
                     $this->metadata->getAll(),
                     new PropertySyncData([], []),
                     []
-                );
+                ,
+            null /* COMPAT 2026-10-28: protocol 2225 ?PassengerOfBlockData */);
             }
         });
     }

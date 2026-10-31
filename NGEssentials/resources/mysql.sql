@@ -220,11 +220,8 @@ SELECT COUNT(*) as count FROM player_relations WHERE (player_one = :player OR pl
 -- #        :player_one string
 -- #        :player_two string
 -- #        :status int
-IF EXISTS (SELECT * FROM player_relations WHERE player_one = :player_two AND player_two = :player_one) THEN
-UPDATE player_relations SET status = :status WHERE player_one = :player_two AND player_two = :player_one;
-ELSE
-INSERT INTO player_relations (player_one, player_two, status) VALUES (:player_one, :player_two, :status) ON DUPLICATE KEY UPDATE status = VALUES(status);
-END IF;
+INSERT INTO player_relations (player_one, player_two, status) VALUES (LEAST(:player_one, :player_two), GREATEST(:player_one, :player_two), :status)
+ON DUPLICATE KEY UPDATE status = VALUES(status);
 -- #    }
 
 -- #    { update1

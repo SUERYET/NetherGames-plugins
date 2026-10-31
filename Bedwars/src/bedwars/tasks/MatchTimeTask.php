@@ -345,10 +345,14 @@ class MatchTimeTask extends \libminigames\tasks\MatchTimeTask
                     }
                     $statsData->addValue($xuid, StatsData::WINS);
                     $statsData->addValue($xuid, StatsData::BW_MODE_WINS);
-                } elseif (!$team->isBedAlive()) {
-                    $statsData->addValue($xuid, StatsData::DEATHS);
-                    $statsData->addValue($xuid, StatsData::BW_DEATHS);
-                    $statsData->addValue($xuid, StatsData::BW_MODE_DEATHS);
+                } else {
+                    $statsData->addValue($xuid, StatsData::LOSSES);
+
+                    if (!$team->isBedAlive()) {
+                        $statsData->addValue($xuid, StatsData::DEATHS);
+                        $statsData->addValue($xuid, StatsData::BW_DEATHS);
+                        $statsData->addValue($xuid, StatsData::BW_MODE_DEATHS);
+                    }
                 }
             }
         }

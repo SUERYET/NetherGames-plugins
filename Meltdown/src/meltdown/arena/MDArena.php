@@ -154,15 +154,7 @@ class MDArena extends Arena
 
         if ($killer->isOnline()) {
             $location = $killer->getLocation();
-            $killer->getNetworkSession()->sendDataPacket(PlaySoundPacket::create(
-                "random.pop",
-                $location->getX(),
-                $location->getY(),
-                $location->getZ(),
-                1,
-                1,
-                null
-            ));
+            $killer->getNetworkSession()->sendDataPacket(PlaySoundPacket::create("random.pop", $location->getX(), $location->getY(), $location->getZ(), 1, 1, 0, false, null, null));
             $this->broadcastMessage(TextFormat::YELLOW . $killer->getName() . TextFormat::WHITE . " knocked down " . TextFormat::YELLOW . $killed->getName() . TextFormat::WHITE . " a level ({$statsData->getValue($killer, StatsData::MD_KILLS)} players knocked)");
         }
     }

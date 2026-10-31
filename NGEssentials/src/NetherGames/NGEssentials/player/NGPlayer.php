@@ -279,14 +279,7 @@ class NGPlayer extends Player
 
             for ($X = $chunkX - $this->viewDistance; $X <= $chunkX + $this->viewDistance; ++$X) {
                 for ($Z = $chunkZ - $this->viewDistance; $Z <= $chunkZ + $this->viewDistance; ++$Z) {
-                    $session->sendDataPacket(LevelChunkPacket::create(
-                        new ChunkPosition($X, $Z),
-                        $dimensionId,
-                        $subChunkCount,
-                        false,
-                        null,
-                        $emptyChunk
-                    ));
+                    $session->sendDataPacket(LevelChunkPacket::create(new ChunkPosition($X, $Z), $dimensionId, $subChunkCount, null, false, [], $emptyChunk, false /* COMPAT 2026-10-28: protocol 2225 新增 clientBiomeUpdate */));
                 }
             }
         }
@@ -441,15 +434,7 @@ class NGPlayer extends Player
     {
         $location = $this->getLocation();
 
-        $this->getNetworkSession()->sendDataPacket(PlaySoundPacket::create(
-            $sound,
-            $location->x,
-            $location->y,
-            $location->z,
-            $volume,
-            $pitch,
-            null
-        ));
+        $this->getNetworkSession()->sendDataPacket(PlaySoundPacket::create($sound, $location->x, $location->y, $location->z, $volume, $pitch, 0, false, null, null));
     }
 
     public function getProxyRegion(): string
@@ -662,7 +647,9 @@ class NGPlayer extends Player
         $this->tick = $tick = $packet->getTick();
         $this->cps->filterAfterTick($tick - 19);
 
-        if ($this->inputMode !== ($inputMode = $packet->getInputMode())) {
+        // COMPAT 2026-10-27: PlayerAuthInputPacket::getInputMode() 现在返回 InputMode 枚举，
+        // 内部仍以 int 存储比较（$this->inputMode 来自 ClientData::$CurrentInputMode，是 int）。
+        if ($this->inputMode !== ($inputMode = $packet->getInputMode()->value)) {
             $event = new PlayerInputChangeEvent($this, $this->inputMode, $inputMode);
             $event->call();
 

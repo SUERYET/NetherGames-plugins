@@ -409,7 +409,16 @@ abstract class Arena
 
     public function getWaitingLobbySpawn(): Location
     {
-        $location = $this->getPlugin()->getEssentials()->getServerManager()->getSpawn();
+        $serverManager = $this->getPlugin()->getEssentials()->getServerManager();
+
+        // COMPAT 2026-10-28: SG / CQ / MD 这类没有专门大厅坐标的游戏，getSpawn() 会退回
+        // "默认世界的出生点"，把那个坐标搬进竞技场世界就是半空/虚空（实测 SG 一进服就无限掉落）。
+        // 这类游戏直接用竞技场世界自己的出生点。
+        if ($this->world !== null && !$serverManager->hasDedicatedSpawn()) {
+            return Location::fromObject($this->world->getSpawnLocation()->add(0.5, 0, 0.5), $this->world);
+        }
+
+        $location = $serverManager->getSpawn();
 
         if ($this->world !== null) {
             $location->world = $this->world;
@@ -694,7 +703,12 @@ abstract class Arena
                     }
                 }
 
-                $player->teleport($serverManager->getSpawn());
+                // COMPAT 2026-10-28: getSpawn() 返回的是"竞技场等待大厅"的坐标
+                // （Arena::getWaitingLobbySpawn() 会把世界换成竞技场世界复用同一个点），
+                // 直接拿来当大厅落点，在默认世界里可能是半空/虚空 → 摔死。
+                // 回大厅必须用默认世界自己的出生点。
+                $hubWorld = $this->getPlugin()->getServer()->getWorldManager()->getDefaultWorld();
+                $player->teleport($hubWorld?->getSpawnLocation() ?? $serverManager->getSpawn());
             }
 
             if ($toHub && !$this->getPlugin()->isStandAloneGame()) {
@@ -1114,8 +1128,12 @@ abstract class Arena
                 $this->xuids[$playerManager->getPlayerName($player)] = $player->getXuid();
 
                 $inventory = $player->getInventory();
-                $inventory->setHeldItemIndex(1);
-                $inventory->setItem(Items::QUIT_BED, Items::getQuitBed());
+                $inventory->setHeldItemIndex(0);
+                // COMPAT 2026-10-28: 移除 "Return to Lobby"（红色床）。
+                // 单服没有大厅服可转接，点它只会被 teleport 到 getSpawn()，
+                // 而 Skywars 那个写死的坐标在本机 assets 的 Hub 地图上下面是空的 → 传送到空中摔死。
+                // 需要退出对局时用 /lobby 命令。
+                // $inventory->setItem(Items::QUIT_BED, Items::getQuitBed());
 
                 if ($this->isWaiting() && $plugin->hasWaitingLobby() && count($this->getMaps()) > 1) {
                     $inventory->setItem(Items::MAP_SELECTOR, Items::getMapSelectionPaper());
@@ -1215,23 +1233,26 @@ abstract class Arena
             $player->setGamemode(GameMode::SPECTATOR);
         }
 
-        $player->getInventory()->setHeldItemIndex(1);
+        $player->getInventory()->setHeldItemIndex(0);
+        // COMPAT 2026-10-28: 同上，观战/结算界面也不再给 "Return to Lobby" 床
         if ($this->isFinishing()) {
             if ($this->getPlugin()->isStandAloneGame()) {
-                $player->getInventory()->setContents([0 => Items::getReplayPaper(), 8 => Items::getQuitBed()]);
+                $player->getInventory()->setContents([0 => Items::getReplayPaper()]);
             } else {
-                $player->getInventory()->setContents([8 => Items::getQuitBed()]);
+                $player->getInventory()->setContents([]);
             }
         } elseif ($this->getPlugin()->isStandAloneGame()) {
-            $player->getInventory()->setContents([0 => Items::getReplayPaper(), 4 => Items::getSpectatorCompass(), 8 => Items::getQuitBed()]);
+            $player->getInventory()->setContents([0 => Items::getReplayPaper(), 4 => Items::getSpectatorCompass()]);
         } else {
-            $player->getInventory()->setContents([4 => Items::getSpectatorCompass(), 8 => Items::getQuitBed()]);
+            $player->getInventory()->setContents([4 => Items::getSpectatorCompass()]);
         }
     }
 
     public function getMinimumPlayers(): int
     {
-        return 4;
+        // COMPAT 2026-10-27: 原来硬编码 4，导致 CountDownTask 的第二道闸永远拦住
+        // 少量玩家的开局（NG_MIN_PLAYERS 只改了第一道闸）。这里统一由环境变量决定。
+        return max(1, (int) (getenv('NG_MIN_PLAYERS') ?: 4));
     }
 
     public function addMapVote(Player $player, int $mapId): void

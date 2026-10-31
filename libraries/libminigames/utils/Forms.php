@@ -374,7 +374,10 @@ abstract class Forms
             foreach ($maps as $button => $map) {
                 $mapDisplayName = $plugin->getMapDisplayName($map, true);
 
-                $form->addButton(new ImageButton($mapDisplayName, ImageButton::IMAGE_TYPE_MAP, $map, static function (Player $player) use ($arena, $plugin, $button, $map) {
+                // COMPAT 2026-10-27: 地图缩略图原本从 https://cdn.nethergames.org/img/maps/<map>.jpg 加载，
+                // 该图床已失效（超时/404），客户端会卡在"加载中"且大多数图出不来。
+                // 改成纯文字按钮，不再依赖任何外部图床。
+                $form->addButton(new Button($mapDisplayName, static function (Player $player) use ($arena, $plugin, $button, $map) {
                     /** @var NGPlayer $player */
                     if ($arena->isWaiting()) {
                         $arena->addMapVote($player, $button);

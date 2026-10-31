@@ -31,10 +31,6 @@ class RabbitHopSound implements Sound
 
     public function encode(Vector3 $pos): array
     {
-        return [PlaySoundPacket::create(
-            "mob.rabbit.hop",
-            $pos->x, $pos->y, $pos->z,
-            0.1, 1, null
-        )];
+        return [PlaySoundPacket::create("mob.rabbit.hop", $pos->x, $pos->y, $pos->z, 0.1, 1, 0, false, null, null)];
     }
 }
