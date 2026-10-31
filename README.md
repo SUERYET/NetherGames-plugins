@@ -176,3 +176,4 @@ git checkout ng-homelab && git rebase master   # 补丁整层挪到新基线
 - 上游：<https://github.com/NetherGamesMC/plugins>（AGPL-3.0，见 [`LICENSE`](LICENSE)）
 - 本分支仅包含本地部署所需补丁；原始代码版权归 NetherGames Network 所有
 - 地图与资源：<https://github.com/NetherGamesMC/assets>
+- **修改声明：[NOTICE.md](NOTICE.md)**（AGPL-3.0 §5(a)：修改版需显著声明被修改过，并给出日期）

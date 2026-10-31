@@ -182,3 +182,4 @@ git checkout ng-homelab && git rebase master
 - This branch only adds patches required for a single-host deployment;
   original code is copyright NetherGames Network
 - Maps & assets: <https://github.com/NetherGamesMC/assets>
+- **Modification notice: [NOTICE.md](NOTICE.md)** (AGPL-3.0 §5(a) requires modified versions to carry prominent notices with dates)
