@@ -1,0 +1,19 @@
+# 统一换行符：仓库内文本文件一律 LF（Windows 检出时也不转换）
+# 背景：PHP/Shell 混用 CRLF 会导致 git diff 出现"整文件重写"，补丁体积暴涨
+* text=auto eol=lf
+
+*.php   text eol=lf
+*.json  text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.md    text eol=lf
+*.sh    text eol=lf
+*.py    text eol=lf
+
+# 二进制：不参与换行转换与 diff
+*.png   binary
+*.jpg   binary
+*.jar   binary
+*.phar  binary
+*.nbt   binary
+*.zip   binary

@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# 打印客户端该连的地址
+#
+# WSL2 是 NAT 网络：TCP 的 localhost 会转发到 Windows，但 **UDP 不会**。
+# Bedrock 走 UDP 19132，所以客户端必须连 WSL 的 IP，而不是 127.0.0.1。
+set -euo pipefail
+
+ip_addr=$(ip -4 -o addr show eth0 2>/dev/null | awk '{print $4}' | cut -d/ -f1)
+if [[ -z ${ip_addr} ]]; then
+  echo "✗ 取不到 WSL 的 IPv4 地址" >&2
+  exit 1
+fi
+
+echo "${ip_addr}:19132"
